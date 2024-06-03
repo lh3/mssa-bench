@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	kseq_t *seq;
 	gzFile fp;
 	int64_t l = 0, max = 0, n_sentinels = 0;
-	int32_t c, algo, add_rev = 0, n_threads = 1;
+	int32_t c, algo = 1, add_rev = 0, n_threads = 1;
 	uint32_t checksum = 0;
 	uint8_t *s = 0;
 	double t_real, t_cpu;
