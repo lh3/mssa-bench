@@ -4,6 +4,9 @@
 #include <zlib.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+
+#include "libsais64.h"
+
 #include "ketopt.h"
 #include "kseq.h"
 KSEQ_INIT(gzFile, gzread)
@@ -11,6 +14,7 @@ KSEQ_INIT(gzFile, gzread)
 #define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 
 int ksa_sa(const unsigned char *T, int *SA, int n, int k); // ksa, based on old sais
+int ksa_sa64(const unsigned char *T, int64_t *SA, int n, int k); // ksa, based on old sais
 int sais_int(const int *T, int *SA, int n, int k); // sais
 int sais(const unsigned char *T, int *SA, int n); // sais
 void suffixsort(int *x, int *p, int n, int k, int l); // qsufsort
@@ -23,6 +27,7 @@ unsigned char seq_nt6_table[128];
 void seq_char2nt6(int l, unsigned char *s);
 void seq_revcomp6(int l, unsigned char *s);
 uint32_t SA_checksum(int l, const int *s);
+uint32_t SA_checksum64(int l, const int64_t *s);
 long peakrss(void);
 double cputime(void);
 double realtime(void);
@@ -32,7 +37,7 @@ int main(int argc, char *argv[])
 	ketopt_t o = KETOPT_INIT;
 	kseq_t *seq;
 	gzFile fp;
-	int *SA, c, l = 0, max = 0, algo = 0, n_sentinels = 0, has_sentinel = 1, no_rev = 0;
+	int *SA = 0, c, l = 0, max = 0, algo = 0, n_sentinels = 0, has_sentinel = 1, no_rev = 0;
 	uint8_t *s = 0;
 	double t_real, t_cpu;
 
@@ -40,30 +45,32 @@ int main(int argc, char *argv[])
 		if (c == 'R') no_rev = 1;
 		else if (c == 'x') has_sentinel = 0;
 		else if (c == 'a') {
-			if (strcmp(optarg, "ksa") == 0) algo = 0;
-			else if (strcmp(optarg, "qsufsort") == 0) algo = 1;
-			else if (strcmp(optarg, "sais") == 0) algo = 2;
-			else if (strcmp(optarg, "divsufsort") == 0) algo = 3;
-			else if (strcmp(optarg, "ssort") == 0) algo = 4;
-			else if (strcmp(optarg, "dc3") == 0) algo = 5;
-			else if (strcmp(optarg, "is") == 0) algo = 6;
+			if (strcmp(o.arg, "ksa") == 0) algo = 0;
+			else if (strcmp(o.arg, "qsufsort") == 0) algo = 1;
+			else if (strcmp(o.arg, "sais") == 0) algo = 2;
+			else if (strcmp(o.arg, "divsufsort") == 0) algo = 3;
+			else if (strcmp(o.arg, "ssort") == 0) algo = 4;
+			else if (strcmp(o.arg, "dc3") == 0) algo = 5;
+			else if (strcmp(o.arg, "is") == 0) algo = 6;
+			else if (strcmp(o.arg, "ksa64") == 0) algo = 7;
+			else if (strcmp(o.arg, "libsais64") == 0) algo = 8;
 			else {
 				fprintf(stderr, "(EE) Unknown algorithm.\n");
 				return 1;
 			}
 		}
 	}
-	if (argc == optind) {
+	if (argc == o.ind) {
 		fprintf(stderr, "Usage: mssa-bench [options] input.fasta\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -a STR    algorithm: ksa, sais, qsufsort, divsufsort, ssort, dc3, is [ksa]\n");
+		fprintf(stderr, "  -a STR    algorithm: ksa, ksa64, sais, qsufsort, divsufsort, ssort, dc3, is [ksa]\n");
 		fprintf(stderr, "  -x        do not regard a NULL as a sentinel\n");
 		return 1;
 	}
 
 	t_real = realtime();
 	t_cpu = cputime();
-	fp = gzopen(argv[optind], "r");
+	fp = gzopen(argv[o.ind], "r");
 	seq = kseq_init(fp);
 	while (kseq_read(seq) >= 0) {
 		if (l + (seq->seq.l + 1) * 2 + 1 >= max) {
@@ -85,7 +92,7 @@ int main(int argc, char *argv[])
 	s[l] = 0;
 	kseq_destroy(seq);
 	gzclose(fp);
-	fprintf(stderr, "(MM) Read file in %.3f*%.3f sec (Peak RSS: %.3f MB)\n", realtime() - t_real, (cputime() - t_cpu) / (realtime() - t_real), peakrss() / 1024.0 / 1024.0);
+	printf("(MM) Read file in %.3f*%.3f sec (Peak RSS: %.3f MB)\n", realtime() - t_real, (cputime() - t_cpu) / (realtime() - t_real), peakrss() / 1024.0 / 1024.0);
 
 	t_real = realtime();
 	t_cpu = cputime();
@@ -95,6 +102,21 @@ int main(int argc, char *argv[])
 			ksa_sa(s, SA, l, 6);
 			SA_checksum(l, SA);
 			free(SA); free(s);
+		} else if (algo == 7) { // ksa64
+			int64_t *SA = (int64_t*)malloc(sizeof(int64_t) * l);
+			ksa_sa64(s, SA, l, 6);
+			SA_checksum64(l, SA); // TODO: not working for 64-bit arrays
+			free(SA); free(s);
+		} else if (algo == 8) { // libsais64
+			int64_t i, *tmp, k = 0;
+			tmp = (int64_t*)malloc(sizeof(int64_t) * (l + 3));
+			for (i = 0; i < l; ++i)
+				tmp[i] = s[i]? n_sentinels + s[i] : ++k;
+			free(s);
+			int64_t *SA = (int64_t*)malloc(sizeof(int64_t) * (l + 10000));
+			libsais64_long(tmp, SA, l, n_sentinels + 6, 10000);
+			SA_checksum64(l, SA);
+			free(SA); free(tmp);
 		} else if (algo == 1 || algo == 2 || algo == 4 || algo == 5) { // sais, qsufsort, ssort or dc3
 			int i, *tmp, k = 0;
 			tmp = (int*)malloc(sizeof(int) * (l + 3));
@@ -154,9 +176,12 @@ int main(int argc, char *argv[])
 			else if (algo == 3) divsufsort(s, SA, l);
 			SA_checksum(l, SA);
 			free(SA); free(s);
+		} else {
+			fprintf(stderr, "(EE) not implemented yet\n");
+			abort();
 		}
 	}
-	fprintf(stderr, "(MM) Generated SA in %.3f*%.3f sec (Peak RSS: %.3f MB)\n", realtime() - t_real, (cputime() - t_cpu) / (realtime() - t_real), peakrss() / 1024.0 / 1024.0);
+	printf("(MM) Generated SA in %.3f*%.3f sec (Peak RSS: %.3f MB)\n", realtime() - t_real, (cputime() - t_cpu) / (realtime() - t_real), peakrss() / 1024.0 / 1024.0);
 	return 0;
 }
 
@@ -196,7 +221,17 @@ uint32_t SA_checksum(int l, const int *s)
 	const int *end = s + l;
 	double t = cputime();
 	for (; s < end; ++s) h = (h << 5) - h + *s;
-	fprintf(stderr, "(MM) Computed SA X31 checksum in %.3f seconds (checksum = %x)\n", cputime() - t, h);
+	printf("(MM) Computed SA X31 checksum in %.3f seconds (checksum = %x)\n", cputime() - t, h);
+	return h;
+}
+
+uint32_t SA_checksum64(int l, const int64_t *s)
+{
+	uint32_t h = *s;
+	const int64_t *end = s + l;
+	double t = cputime();
+	for (; s < end; ++s) h = (h << 5) - h + *s;
+	printf("(MM) Computed SA X31 checksum in %.3f seconds (checksum = %x)\n", cputime() - t, h);
 	return h;
 }
 
