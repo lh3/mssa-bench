@@ -42,13 +42,14 @@ int main(int argc, char *argv[])
 	kseq_t *seq;
 	gzFile fp;
 	int64_t l = 0, max = 0, n_sentinels = 0;
-	int32_t c, algo, add_rev = 0;
+	int32_t c, algo, add_rev = 0, n_threads = 1;
 	uint32_t checksum = 0;
 	uint8_t *s = 0;
 	double t_real, t_cpu;
 
-	while ((c = ketopt(&o, argc, argv, 1, "a:r", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "a:rt:", 0)) >= 0) {
 		if (c == 'r') add_rev = 1;
+		else if (c == 't') n_threads = atoi(o.arg);
 		else if (c == 'a') {
 			if (strcmp(o.arg, "ksa64") == 0) algo = 1;
 			else if (strcmp(o.arg, "ksa") == 0) algo = 2;
@@ -64,7 +65,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Usage: mssa-bench [options] input.fasta\n");
 		fprintf(stderr, "Options:\n");
 		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64 or sais [ksa64]\n");
-		fprintf(stderr, "  -x        do not regard a NULL as a sentinel\n");
+#ifdef LIBSAIS_OPENMP
+		fprintf(stderr, "  -t INT    number of threads for sais [%d]\n", n_threads);
+#endif
+		fprintf(stderr, "  -r        include reverse complement sequences\n");
 		return 1;
 	}
 
@@ -109,7 +113,15 @@ int main(int argc, char *argv[])
 			tmp[i] = s[i]? n_sentinels + s[i] : ++k;
 		free(s);
 		int64_t *SA = Malloc(int64_t, l + 10000);
+#ifdef LIBSAIS_OPENMP
+		if (n_threads > 1) {
+			libsais64_long_omp(tmp, SA, l, n_sentinels + 6, 10000, n_threads);
+		} else {
+			libsais64_long(tmp, SA, l, n_sentinels + 6, 10000);
+		}
+#else
 		libsais64_long(tmp, SA, l, n_sentinels + 6, 10000);
+#endif
 		checksum = SA_checksum64(l, SA);
 		free(SA); free(tmp);
 	} else if (algo == 4) { // libsais64
@@ -118,7 +130,15 @@ int main(int argc, char *argv[])
 			tmp[i] = s[i]? n_sentinels + s[i] : ++k;
 		free(s);
 		int32_t *SA = Malloc(int32_t, l + 10000);
+#ifdef LIBSAIS_OPENMP
+		if (n_threads > 1) {
+			libsais_int_omp(tmp, SA, l, n_sentinels + 6, 10000, n_threads);
+		} else {
+			libsais_int(tmp, SA, l, n_sentinels + 6, 10000);
+		}
+#else
 		libsais_int(tmp, SA, l, n_sentinels + 6, 10000);
+#endif
 		checksum = SA_checksum(l, SA);
 		free(SA); free(tmp);
 	} else {

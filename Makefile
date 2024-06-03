@@ -1,7 +1,5 @@
 CC=			gcc
-CXX=		g++
 CFLAGS=		-g -Wall -O3
-CXXFLAGS=	$(CFLAGS)
 CPPFLAGS=
 OBJS=		ksa.o ksa64.o libsais.o libsais64.o
 EXE=		mssa-bench
@@ -23,7 +21,7 @@ endif
 all:$(EXE)
 
 mssa-bench:$(OBJS) mssac.o
-	$(CXX) $(CFLAGS) $(CPPFLAGS) $(OBJS) mssac.o -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(OBJS) mssac.o -o $@ $(LIBS)
 
 ksa.o:ksa.c
 	$(CC) -c $(CFLAGS) -o $@ $<
