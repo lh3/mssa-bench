@@ -1,10 +1,10 @@
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <zlib.h>
-#include <time.h>
 #include <sys/resource.h>
+#include <sys/time.h>
+#include "ketopt.h"
 #include "kseq.h"
 KSEQ_INIT(gzFile, gzread)
 
@@ -23,43 +23,46 @@ unsigned char seq_nt6_table[128];
 void seq_char2nt6(int l, unsigned char *s);
 void seq_revcomp6(int l, unsigned char *s);
 uint32_t SA_checksum(int l, const int *s);
-double rssmem();
+long peakrss(void);
+double cputime(void);
+double realtime(void);
 
 int main(int argc, char *argv[])
 {
+	ketopt_t o = KETOPT_INIT;
 	kseq_t *seq;
 	gzFile fp;
-	int *SA, c, l = 0, max = 0, algo = 0, n_sentinels = 0, has_sentinel = 1;
+	int *SA, c, l = 0, max = 0, algo = 0, n_sentinels = 0, has_sentinel = 1, no_rev = 0;
 	uint8_t *s = 0;
-	clock_t t = clock();
+	double t_real, t_cpu;
 
-	while ((c = getopt(argc, argv, "a:x")) >= 0) {
-		switch (c) {
-			case 'a':
-				if (strcmp(optarg, "ksa") == 0) algo = 0;
-				else if (strcmp(optarg, "qsufsort") == 0) algo = 1;
-				else if (strcmp(optarg, "sais") == 0) algo = 2;
-				else if (strcmp(optarg, "divsufsort") == 0) algo = 3;
-				else if (strcmp(optarg, "ssort") == 0) algo = 4;
-				else if (strcmp(optarg, "dc3") == 0) algo = 5;
-				else if (strcmp(optarg, "is") == 0) algo = 6;
-				else {
-					fprintf(stderr, "(EE) Unknown algorithm.\n");
-					return 1;
-				}
-				break;
-			case 'x': has_sentinel = 0; break;
+	while ((c = ketopt(&o, argc, argv, 1, "a:xR", 0)) >= 0) {
+		if (c == 'R') no_rev = 1;
+		else if (c == 'x') has_sentinel = 0;
+		else if (c == 'a') {
+			if (strcmp(optarg, "ksa") == 0) algo = 0;
+			else if (strcmp(optarg, "qsufsort") == 0) algo = 1;
+			else if (strcmp(optarg, "sais") == 0) algo = 2;
+			else if (strcmp(optarg, "divsufsort") == 0) algo = 3;
+			else if (strcmp(optarg, "ssort") == 0) algo = 4;
+			else if (strcmp(optarg, "dc3") == 0) algo = 5;
+			else if (strcmp(optarg, "is") == 0) algo = 6;
+			else {
+				fprintf(stderr, "(EE) Unknown algorithm.\n");
+				return 1;
+			}
 		}
 	}
 	if (argc == optind) {
-		fprintf(stderr, "\n");
-		fprintf(stderr, "Usage:   mssac [options] input.fasta\n\n");
-		fprintf(stderr, "Options: -a STR    algorithm: ksa, sais, qsufsort, divsufsort, ssort, dc3, is [ksa]\n");
-		fprintf(stderr, "         -x        do not regard a NULL as a sentinel\n");
-		fprintf(stderr, "\n");
+		fprintf(stderr, "Usage: mssa-bench [options] input.fasta\n");
+		fprintf(stderr, "Options:\n");
+		fprintf(stderr, "  -a STR    algorithm: ksa, sais, qsufsort, divsufsort, ssort, dc3, is [ksa]\n");
+		fprintf(stderr, "  -x        do not regard a NULL as a sentinel\n");
 		return 1;
 	}
 
+	t_real = realtime();
+	t_cpu = cputime();
 	fp = gzopen(argv[optind], "r");
 	seq = kseq_init(fp);
 	while (kseq_read(seq) >= 0) {
@@ -71,17 +74,21 @@ int main(int argc, char *argv[])
 		seq_char2nt6(seq->seq.l, (uint8_t*)seq->seq.s);
 		memcpy(s + l, seq->seq.s, seq->seq.l + 1);
 		l += seq->seq.l + 1;
-		seq_revcomp6(seq->seq.l, (uint8_t*)seq->seq.s);
-		memcpy(s + l, seq->seq.s, seq->seq.l + 1);
-		l += seq->seq.l + 1;
-		n_sentinels += 2;
+		++n_sentinels;
+		if (!no_rev) {
+			seq_revcomp6(seq->seq.l, (uint8_t*)seq->seq.s);
+			memcpy(s + l, seq->seq.s, seq->seq.l + 1);
+			l += seq->seq.l + 1;
+			++n_sentinels;
+		}
 	}
 	s[l] = 0;
 	kseq_destroy(seq);
 	gzclose(fp);
-	fprintf(stderr, "(MM) Read %d symbols in %.3f seconds.\n", l, (double)(clock() - t) / CLOCKS_PER_SEC);
+	fprintf(stderr, "(MM) Read file in %.3f*%.3f sec (Peak RSS: %.3f MB)\n", realtime() - t_real, (cputime() - t_cpu) / (realtime() - t_real), peakrss() / 1024.0 / 1024.0);
 
-	t = clock();
+	t_real = realtime();
+	t_cpu = cputime();
 	if (has_sentinel) { // A NULL is regarded a sentinel
 		if (algo == 0) { // ksa
 			SA = (int*)malloc(sizeof(int) * l);
@@ -149,11 +156,7 @@ int main(int argc, char *argv[])
 			free(SA); free(s);
 		}
 	}
-	fprintf(stderr, "(MM) Constructed suffix array in %.3f seconds.\n", (double)(clock() - t) / CLOCKS_PER_SEC);
-
-#ifndef __linux__
-	fprintf(stderr, "(MM) Max RSS: %.3f MB\n", rssmem());
-#endif
+	fprintf(stderr, "(MM) Generated SA in %.3f*%.3f sec (Peak RSS: %.3f MB)\n", realtime() - t_real, (cputime() - t_cpu) / (realtime() - t_real), peakrss() / 1024.0 / 1024.0);
 	return 0;
 }
 
@@ -191,15 +194,37 @@ uint32_t SA_checksum(int l, const int *s)
 {
 	uint32_t h = *s;
 	const int *end = s + l;
-	clock_t t = clock();
+	double t = cputime();
 	for (; s < end; ++s) h = (h << 5) - h + *s;
-	fprintf(stderr, "(MM) Computed SA X31 checksum in %.3f seconds (checksum = %x)\n", (double)(clock() - t) / CLOCKS_PER_SEC, h);
+	fprintf(stderr, "(MM) Computed SA X31 checksum in %.3f seconds (checksum = %x)\n", cputime() - t, h);
 	return h;
 }
 
-double rssmem() // not working in Linux
+double cputime(void)
 {
-    struct rusage r;
-    getrusage(RUSAGE_SELF, &r);
-    return r.ru_maxrss / 1024.0 / 1024.0;
+	struct rusage r;
+	getrusage(RUSAGE_SELF, &r);
+	return r.ru_utime.tv_sec + r.ru_stime.tv_sec + 1e-6 * (r.ru_utime.tv_usec + r.ru_stime.tv_usec);
+}
+
+long peakrss(void)
+{
+	struct rusage r;
+	getrusage(RUSAGE_SELF, &r);
+#if defined(__linux__)
+	return r.ru_maxrss * 1024;
+#elif defined(__APPLE__)
+	return r.ru_maxrss;
+#endif
+}
+
+double realtime(void)
+{
+	static double realtime0 = -1.0;
+	struct timeval tp;
+	double t;
+	gettimeofday(&tp, NULL);
+	t = tp.tv_sec + tp.tv_usec * 1e-6;
+	if (realtime0 < 0.0) realtime0 = t;
+	return t - realtime0;
 }
