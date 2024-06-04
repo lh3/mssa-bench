@@ -25,7 +25,7 @@ KSEQ_INIT(gzFile, gzread)
 	} while (0)
 
 int ksa_sa(const unsigned char *T, int *SA, int n, int k);
-int ksa_sa64(const unsigned char *T, int64_t *SA, int n, int k);
+int ksa_sa64(const unsigned char *T, int64_t *SA, int64_t n, int k);
 
 unsigned char seq_nt6_table[128];
 void seq_char2nt6(int l, unsigned char *s);
