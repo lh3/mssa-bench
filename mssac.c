@@ -8,6 +8,8 @@
 #include "libsais.h"
 #include "libsais64.h"
 
+#include "gsacak.h"
+
 #include "ketopt.h"
 #include "kseq.h"
 KSEQ_INIT(gzFile, gzread)
@@ -55,6 +57,7 @@ int main(int argc, char *argv[])
 			else if (strcmp(o.arg, "ksa") == 0) algo = 2;
 			else if (strcmp(o.arg, "sais64") == 0) algo = 3;
 			else if (strcmp(o.arg, "sais") == 0) algo = 4;
+			else if (strcmp(o.arg, "gsaca-k") == 0) algo = 5;
 			else {
 				fprintf(stderr, "(EE) Unknown algorithm.\n");
 				return 1;
@@ -64,7 +67,7 @@ int main(int argc, char *argv[])
 	if (argc == o.ind) {
 		fprintf(stderr, "Usage: mssa-bench [options] input.fasta\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64 or sais [ksa64]\n");
+		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64, sais or gsaca-k [ksa64]\n");
 #ifdef LIBSAIS_OPENMP
 		fprintf(stderr, "  -t INT    number of threads for sais [%d]\n", n_threads);
 #endif
@@ -78,13 +81,13 @@ int main(int argc, char *argv[])
 	fp = gzopen(argv[o.ind], "r");
 	seq = kseq_init(fp);
 	while (kseq_read(seq) >= 0) {
-		Grow(uint8_t, s, l + (seq->seq.l + 1), max);
+		Grow(uint8_t, s, l + (seq->seq.l + 2), max); // +2 to leave room for gSACA-K
 		seq_char2nt6(seq->seq.l, (uint8_t*)seq->seq.s);
 		memcpy(s + l, seq->seq.s, seq->seq.l + 1); // NB: we are copying 0
 		l += seq->seq.l + 1;
 		++n_sentinels;
 		if (add_rev) {
-			Grow(uint8_t, s, l + (seq->seq.l + 1), max);
+			Grow(uint8_t, s, l + (seq->seq.l + 2), max);
 			seq_revcomp6(seq->seq.l, (uint8_t*)seq->seq.s);
 			memcpy(s + l, seq->seq.s, seq->seq.l + 1);
 			l += seq->seq.l + 1;
@@ -141,6 +144,14 @@ int main(int argc, char *argv[])
 #endif
 		checksum = SA_checksum(l, SA);
 		free(SA); free(tmp);
+	} else if (algo == 5) { // gSACA-K
+		uint_t *SA = Malloc(uint_t, l + 1);
+		int64_t i;
+		for (i = 0; i < l; ++i) ++s[i];
+		s[l] = 0;
+		gsacak(s, SA, 0, 0, l + 1);
+		checksum = sizeof(uint_t) == 8? SA_checksum64(l, (int64_t*)SA + 1) : SA_checksum(l, (int32_t*)SA + 1);
+		free(SA); free(s);
 	} else {
 		fprintf(stderr, "(EE) unknown algorithms\n");
 		return 1;

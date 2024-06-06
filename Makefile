@@ -1,7 +1,7 @@
 CC=			gcc
 CFLAGS=		-g -Wall -O3
-CPPFLAGS=
-OBJS=		ksa.o ksa64.o libsais.o libsais64.o
+CPPFLAGS=	-DM64=1 # we are interested in the 64-bit version
+OBJS=		ksa.o ksa64.o libsais.o libsais64.o gsacak.o
 EXE=		mssa-bench
 INCLUDES=
 LIBS=		-lz
@@ -37,6 +37,7 @@ depend:
 
 # DO NOT DELETE
 
+gsacak.o: gsacak.h
 libsais.o: libsais.h
 libsais64.o: libsais.h libsais64.h
-mssac.o: libsais.h libsais64.h ketopt.h kseq.h
+mssac.o: libsais.h libsais64.h gsacak.h ketopt.h kseq.h
