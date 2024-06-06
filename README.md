@@ -23,11 +23,11 @@ billion symbols in total) on a Xeon Gold 6130:
 |             | ksa|gsaca-k|sais-t1|sais-t4|sais-t8|
 |:------------|---:|------:|------:|------:|------:|
 |# threads    |   1|      1|      1|      4|      8|
-|Elapsed (s)  |1396|crashed|    588|    386|    260|
-|CPU time (s) |1395|crashed|    587|   1152|   1439|
-|Peak RSS (GB)|52.3|crashed|   92.9|   92.9|   92.9|
+|Elapsed (s)  |1396|   1462|    588|    386|    260|
+|CPU time (s) |1395|   1459|    587|   1152|   1439|
+|Peak RSS (GB)|52.3|   26.8|   92.9|   92.9|   92.9|
 
-gSACA-K worked on small input but crashed for CHM13.
+gSACA-K would crash if compiled with `-fopenmp`. Not sure why.
 
 [libsais]: https://github.com/IlyaGrebnov/libsais
 [chm13]: https://s3-us-west-2.amazonaws.com/human-pangenomics/index.html?prefix=T2T/CHM13/assemblies/analysis_set/
