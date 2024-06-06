@@ -6,7 +6,7 @@ EXE=		mssa-bench
 INCLUDES=
 LIBS=		-lz
 
-ifneq ($(openmp),)
+ifneq ($(omp),)
 	CPPFLAGS=-DLIBSAIS_OPENMP
 	CFLAGS+=-fopenmp
 endif
