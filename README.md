@@ -7,7 +7,7 @@ here focus on the most common definition as follows.  Let
 $`\mathcal{T}=\{T_1,T_2,\ldots,T_n\}`$ be a set of strings over $\Sigma$. Their
 concatenation is $`T=T_1\$_1T_2\$_2\cdots T_n\$_n`$ where
 $`\$_1<\$_2<\cdots\$_n`$ are smaller than all symbols in $\Sigma$. The SA of
-string set $`\mathcal{T}`$ is the SA of string $T$.
+string set $`\mathcal{T}`$ is defined as the SA of string $T$.
 
 Few SA construction libraries directly support string sets. Nonetheless, we can
 achieve the goal for any libraries that support integer alphabets, such as
@@ -29,9 +29,9 @@ of $`\$_i`$ in $T$. The comparison between symbols takes more time but we do
 not need to convert $T$ to integer arrays anymore and can thus save memory.
 
 [Published in 2017][gsacak-paper], [gSACA-K][gsacak] is another library based
-on the linear SAIS algorithm. Please read its paper for details.
+on the linear-time SAIS algorithm. Please read its paper for details.
 
-Here is the timing for constructing the [CHM13v2 genome][chm13] on both strand (6.1
+Here is the timing for constructing the [CHM13v2 genome][chm13] on both strand (6.2
 billion symbols in total) on a Xeon Gold 6130:
 
 |             | ksa|gsaca-k|sais-t1|sais-t4|sais-t8|
@@ -51,7 +51,7 @@ Some notes and observations:
 * gSACA-K would crash if compiled with `-fopenmp`. I am not sure why.
 
 * ksa is faster than gSACA-K and has the same memory footprint. It would be
-  good to apply this strategy to libsais to reduce its peak memory.
+  good to apply this ksa strategy to libsais to reduce its peak memory.
 
 * We omitted [ropebwt2][rb2] and [BEETL][beetl] because they are slow for
   chromosome-long strings and we omitted [grlBWT][grl] because it writes
