@@ -6,7 +6,7 @@ There are [different ways][ss-review] to define the SA of a string set. We
 here focus on the most common definition as follows.  Let
 $`\mathcal{T}=\{T_1,T_2,\ldots,T_n\}`$ be a set of strings over $\Sigma$. Their
 concatenation is $`T=T_1\$_1T_2\$_2\cdots T_n\$_n`$ where
-$`\$_1<\$_2<\cdots\$_n`$ are smaller than all symbols in $\Sigma$. The SA of
+$`\$_1<\$_2<\cdots<\$_n`$ are smaller than all symbols in $\Sigma$. The SA of
 string set $`\mathcal{T}`$ is defined as the SA of string $T$.
 
 Few SA construction libraries directly support string sets. Nonetheless, we can
