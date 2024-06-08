@@ -1,21 +1,35 @@
-This repo evaluates the performance of three multi-string suffix array (SA)
-construction methods, [libsais][libsais], [gSACA-K][gsacak] and [ksa].
+This repo evaluates the performance of portable libraries for constructing the
+suffix array (SA) of string sets. These libraries only include a few source
+files and have no dependencies. They can be building blocks of larger projects.
 
-Let $`\{T_1,T_2,\ldots,T_n\}`$ be a set of strings over $\Sigma$. Their
+There are [different ways][ss-review] to define the SA of a string set. We
+here focus on the most common definition as follows.  Let
+$`\mathcal{T}=\{T_1,T_2,\ldots,T_n\}`$ be a set of strings over $\Sigma$. Their
 concatenation is $`T=T_1\$_1T_2\$_2\cdots T_n\$_n`$ where
-$`\$_1<\$_2<\cdots\$_n`$ are smaller than all symbols in $\Sigma$.
-We would like to compute the suffix array of $T$.
+$`\$_1<\$_2<\cdots\$_n`$ are smaller than all symbols in $\Sigma$. The SA of
+string set $`\mathcal{T}`$ is the SA of string $T$.
 
-Ksa was adapted from an ancient version of [Yuta Mori][mori]'s sais in 2011. During
-symbol comparisons, it implicitly replaces a sentinel $`\$_i`$ with
-$`j-|T|`$ where $j$ is the offset of $`\$_i`$ in $T$. Ksa needs at least 9
-bytes per element for 64-bit integers.
+Few SA construction libraries directly support string sets. Nonetheless, we can
+achieve the goal for any libraries that support integer alphabets, such as
+[libsais][libsais], by converting $T$ to an integer array $X$:
+```math
+X[k]=\left\{\begin{array}{ll}
+i & \mbox{if $T[k]=\$_i$} \\
+T[k]+n & \mbox{otherwise}
+\end{array}\right.
+```
+Then the SA of $X$ will be identical to the SA of $T$. A disadvantage of this
+method is that we need to convert 8-bit characters to 32-bit or 64-bit
+integers. This increases the memory footprint.
 
-With libsais, we generate an integer array $`X`$, such that $`X[k]=i`$
-if $`T[k]=\$_i`$, or $`X[k]=T[k]+n`$ otherwise. We apply libsais to the integer
-array. This approach needs at least 16 bytes per element.
+To alleviate the issue, I developed [ksa][ksa] in 2011 by adapting an old
+version of [Yuta Mori][mori]'s sais. Briefly, during symbol comparisons, ksa
+implicitly replaces a sentinel $`\$_i`$ with $`j-|T|`$ where $j$ is the offset
+of $`\$_i`$ in $T$. The comparison between symbols takes more time but we do
+not need to convert $T$ to integer arrays anymore and can thus save memory.
 
-For gSACA-K, see [its paper][gsacak-paper].
+[Published in 2017][gsacak-paper], [gSACA-K][gsacak] is another library based
+on the linear SAIS algorithm. Please read its paper for details.
 
 Here is the timing for constructing the [CHM13v2 genome][chm13] on both strand (6.1
 billion symbols in total) on a Xeon Gold 6130:
@@ -27,7 +41,23 @@ billion symbols in total) on a Xeon Gold 6130:
 |CPU time (s) |1395|   3349|    587|   1152|   1439|
 |Peak RSS (GB)|52.3|   53.5|   92.9|   92.9|   92.9|
 
-gSACA-K would crash if compiled with `-fopenmp`. Not sure why.
+Some notes and observations:
+
+* libsais is clearly the fastest even on a single thread and we see noticeable
+  speedup with multiple threads. A caveat is that the multi-threading
+  performance of libsais appears to have large fluctuation. I am yet to do a
+  systematic study to confirm, though.
+
+* gSACA-K would crash if compiled with `-fopenmp`. I am not sure why.
+
+* ksa is faster than gSACA-K and has the same memory footprint. It would be
+  good to apply this strategy to libsais to reduce its peak memory.
+
+* We omitted [ropebwt2][rb2] and [BEETL][beetl] because they are slow for
+  chromosome-long strings and we omitted [grlBWT][grl] because it writes
+  temporary files and is not designed as a library. We did not evaluate
+  [eGAP][egap] because gSACA-K appears to be faster in multiple third-party
+  benchmarks.
 
 [libsais]: https://github.com/IlyaGrebnov/libsais
 [chm13]: https://s3-us-west-2.amazonaws.com/human-pangenomics/index.html?prefix=T2T/CHM13/assemblies/analysis_set/
@@ -35,3 +65,10 @@ gSACA-K would crash if compiled with `-fopenmp`. Not sure why.
 [gsacak]: https://github.com/felipelouza/gsa-is
 [gsacak-paper]: https://www.sciencedirect.com/science/article/pii/S0304397517302621
 [ksa]: https://github.com/lh3/fermi/blob/master/ksa.c
+[fermi]: https://github.com/lh3/fermi
+[fermi-paper]: https://academic.oup.com/bioinformatics/article/28/14/1838/218887
+[ss-review]: https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btae333/7681884
+[rb2]: https://github.com/lh3/ropebwt2
+[grl]: https://github.com/ddiazdom/grlBWT
+[beetl]: https://github.com/BEETL/BEETL
+[egap]: https://github.com/felipelouza/egap
