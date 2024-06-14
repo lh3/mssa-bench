@@ -34,19 +34,21 @@ on the linear-time SAIS algorithm. Please read its paper for details.
 Here is the timing for constructing the [CHM13v2 genome][chm13] on both strand (6.2
 billion symbols in total) on a Xeon Gold 6130:
 
-|             | ksa|gsaca-k|sais-t1|sais-t4|sais-t8|
-|:------------|---:|------:|------:|------:|------:|
-|# threads    |   1|      1|      1|      4|      8|
-|Elapsed (s)  |1396|   3356|    588|    386|    260|
-|CPU time (s) |1395|   3349|    587|   1152|   1439|
-|Peak RSS (GB)|52.3|   53.5|   92.9|   92.9|   92.9|
+|             | ksa|gsaca-k|sais-t1|sais-t4|sais-t8|sais-t8b|sais-t8c|sais16-t8c|
+|:------------|---:|------:|------:|------:|------:|-------:|-------:|---------:|
+|# threads    |   1|      1|      1|      4|      8|       8|       8|         8|
+|Elapsed (s)  |1396|   3356|    588|    386|    260|     374|     473|       296|
+|CPU time (s) |1395|   3349|    587|   1152|   1439|    1895|    2602|      1146|
+|Peak RSS (GB)|52.3|   53.5|   92.9|   92.9|   92.9|    92.9|    92.9|      58.4|
 
 Some notes and observations:
 
 * libsais is clearly the fastest even on a single thread and we see noticeable
   speedup with multiple threads. A caveat is that the multi-threading
-  performance of libsais appears to have large fluctuation. I am yet to do a
-  systematic study to confirm, though.
+  performance of libsais appears to have large fluctuation. For example,
+  the three sais-t8 were run on different nodes with the same configuration but
+  the speed was quite different. sais-t8c and sais16-t8c were run on the same
+  machine.
 
 * gSACA-K would crash if compiled with `-fopenmp`. I am not sure why.
 
