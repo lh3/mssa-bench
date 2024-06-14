@@ -1,12 +1,12 @@
 CC=			gcc
 CFLAGS=		-g -Wall -O3
 CPPFLAGS=	-DM64=1 # we are interested in the 64-bit version
-OBJS=		ksa.o ksa64.o libsais.o libsais64.o gsacak.o
+OBJS=		ksa.o ksa64.o libsais.o libsais64.o libsais16.o libsais16x64.o gsacak.o
 EXE=		mssa-bench
 INCLUDES=
 LIBS=		-lz
 
-ifneq ($(omp),)
+ifneq ($(omp),0)
 	CPPFLAGS=-DLIBSAIS_OPENMP
 	CFLAGS+=-fopenmp
 endif
@@ -39,5 +39,7 @@ depend:
 
 gsacak.o: gsacak.h
 libsais.o: libsais.h
+libsais16.o: libsais16.h
+libsais16x64.o: libsais16.h libsais16x64.h
 libsais64.o: libsais.h libsais64.h
-mssac.o: libsais.h libsais64.h gsacak.h ketopt.h kseq.h
+mssac.o: libsais.h libsais64.h libsais16x64.h gsacak.h ketopt.h kseq.h

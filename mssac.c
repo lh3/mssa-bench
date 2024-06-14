@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 #include <stdio.h>
 #include <zlib.h>
 #include <sys/resource.h>
@@ -7,6 +8,7 @@
 
 #include "libsais.h"
 #include "libsais64.h"
+#include "libsais16x64.h"
 
 #include "gsacak.h"
 
@@ -58,6 +60,7 @@ int main(int argc, char *argv[])
 			else if (strcmp(o.arg, "sais64") == 0) algo = 3;
 			else if (strcmp(o.arg, "sais") == 0) algo = 4;
 			else if (strcmp(o.arg, "gsaca-k") == 0) algo = 5;
+			else if (strcmp(o.arg, "sais16x64") == 0) algo = 6;
 			else {
 				fprintf(stderr, "(EE) Unknown algorithm.\n");
 				return 1;
@@ -67,7 +70,7 @@ int main(int argc, char *argv[])
 	if (argc == o.ind) {
 		fprintf(stderr, "Usage: mssa-bench [options] input.fasta\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64, sais or gsaca-k [ksa64]\n");
+		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64, sais, sais16x64 or gsaca-k [ksa64]\n");
 #ifdef LIBSAIS_OPENMP
 		fprintf(stderr, "  -t INT    number of threads for sais [%d]\n", n_threads);
 #endif
@@ -127,7 +130,7 @@ int main(int argc, char *argv[])
 #endif
 		checksum = SA_checksum64(l, SA);
 		free(SA); free(tmp);
-	} else if (algo == 4) { // libsais64
+	} else if (algo == 4) { // libsais
 		int32_t i, k = 0, *tmp = Malloc(int32_t, l);
 		for (i = 0; i < l; ++i)
 			tmp[i] = s[i]? n_sentinels + s[i] : ++k;
@@ -143,6 +146,25 @@ int main(int argc, char *argv[])
 		libsais_int(tmp, SA, l, n_sentinels + 6, 10000);
 #endif
 		checksum = SA_checksum(l, SA);
+		free(SA); free(tmp);
+	} else if (algo == 6) { // libsais16x64
+		int64_t i, k = 0;
+		assert(n_sentinels + 6 < UINT16_MAX);
+		uint16_t *tmp = Malloc(uint16_t, l);
+		for (i = 0; i < l; ++i)
+			tmp[i] = s[i]? n_sentinels + s[i] : ++k;
+		free(s);
+		int64_t *SA = Malloc(int64_t, l + 10000);
+#ifdef LIBSAIS_OPENMP
+		if (n_threads > 1) {
+			libsais16x64_omp(tmp, SA, l, 10000, 0, n_threads);
+		} else {
+			libsais16x64(tmp, SA, l, 10000, 0);
+		}
+#else
+		libsais16x64(tmp, SA, l, 10000, 0);
+#endif
+		checksum = SA_checksum64(l, SA);
 		free(SA); free(tmp);
 	} else if (algo == 5) { // gSACA-K
 		uint_t *SA = Malloc(uint_t, l + 1);
