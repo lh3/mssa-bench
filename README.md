@@ -27,6 +27,7 @@ version of [Yuta Mori][mori]'s sais. Briefly, during symbol comparisons, ksa
 implicitly replaces a sentinel $`\$_i`$ with $`j-|T|`$ where $j$ is the offset
 of $`\$_i`$ in $T$. The comparison between symbols takes more time but we do
 not need to convert $T$ to integer arrays anymore and can thus save memory.
+This repo includes an updated version named [msais][msais].
 
 [Published in 2017][gsacak-paper], [gSACA-K][gsacak] is another library based
 on the linear-time SAIS algorithm. Please read its paper for details.
@@ -34,11 +35,11 @@ on the linear-time SAIS algorithm. Please read its paper for details.
 Here is the timing for constructing the [CHM13v2 genome][chm13] on both strand (6.2
 billion symbols in total) on a Xeon Gold 6130:
 
-|             | ksa|gsaca-k|sais-t1|sais-t4|sais-t8|sais-t8b|sais-t8c|sais16-t8c|
+|             |msais|gsaca-k|sais-t1|sais-t4|sais-t8|sais-t8b|sais-t8c|sais16-t8c|
 |:------------|---:|------:|------:|------:|------:|-------:|-------:|---------:|
 |# threads    |   1|      1|      1|      4|      8|       8|       8|         8|
-|Elapsed (s)  |1396|   3356|    588|    386|    260|     374|     473|       296|
-|CPU time (s) |1395|   3349|    587|   1152|   1439|    1895|    2602|      1146|
+|Elapsed (s)  |1211|   3356|    588|    386|    260|     374|     473|       296|
+|CPU time (s) |1209|   3349|    587|   1152|   1439|    1895|    2602|      1146|
 |Peak RSS (GB)|52.3|   53.5|   92.9|   92.9|   92.9|    92.9|    92.9|      58.4|
 
 Some notes and observations:
@@ -52,8 +53,8 @@ Some notes and observations:
 
 * gSACA-K would crash if compiled with `-fopenmp`. I am not sure why.
 
-* ksa is faster than gSACA-K and has the same memory footprint. It would be
-  good to apply this ksa strategy to libsais to reduce its peak memory.
+* msais is faster than gSACA-K and has the same memory footprint. It would be
+  good to apply this msais strategy to libsais to reduce its peak memory.
 
 * We omitted [ropebwt2][rb2] and [BEETL][beetl] because they are slow for
   chromosome-long strings and we omitted [grlBWT][grl] because it writes
@@ -74,3 +75,4 @@ Some notes and observations:
 [grl]: https://github.com/ddiazdom/grlBWT
 [beetl]: https://github.com/BEETL/BEETL
 [egap]: https://github.com/felipelouza/egap
+[msais]: https://github.com/lh3/msais-lite
