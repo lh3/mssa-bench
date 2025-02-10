@@ -10,6 +10,7 @@
 #include "libsais64.h"
 #include "libsais16x64.h"
 
+#include "msais.h"
 #include "gsacak.h"
 
 #include "ketopt.h"
@@ -27,9 +28,6 @@ KSEQ_INIT(gzFile, gzread)
 			(ptr) = Realloc(type, (ptr), (__m)); \
 		} \
 	} while (0)
-
-int ksa_sa(const unsigned char *T, int *SA, int n, int k);
-int ksa_sa64(const unsigned char *T, int64_t *SA, int64_t n, int k);
 
 unsigned char seq_nt6_table[128];
 void seq_char2nt6(int l, unsigned char *s);
@@ -110,7 +108,7 @@ int main(int argc, char *argv[])
 		free(SA); free(s);
 	} else if (algo == 2) { // ksa
 		int32_t *SA = Malloc(int32_t, l);
-		ksa_sa(s, SA, l, 6);
+		ksa_sa32(s, SA, l, 6);
 		checksum = SA_checksum(l, SA);
 		free(SA); free(s);
 	} else if (algo == 3) { // libsais64
