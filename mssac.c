@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
 			else if (strcmp(o.arg, "sais") == 0) algo = 4;
 			else if (strcmp(o.arg, "gsaca-k") == 0) algo = 5;
 			else if (strcmp(o.arg, "sais16x64") == 0) algo = 6;
+			else if (strcmp(o.arg, "sais64-g") == 0) algo = 7;
 			else {
 				fprintf(stderr, "(EE) Unknown algorithm.\n");
 				return 1;
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
 	if (argc == o.ind) {
 		fprintf(stderr, "Usage: mssa-bench [options] input.fasta\n");
 		fprintf(stderr, "Options:\n");
-		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64, sais, sais16x64 or gsaca-k [ksa64]\n");
+		fprintf(stderr, "  -a STR    algorithm: ksa64, ksa, sais64-g, sais64, sais, sais16x64 or gsaca-k [ksa64]\n");
 #ifdef LIBSAIS_OPENMP
 		fprintf(stderr, "  -t INT    number of threads for sais [%d]\n", n_threads);
 #endif
@@ -164,6 +165,11 @@ int main(int argc, char *argv[])
 #endif
 		checksum = SA_checksum64(l, SA);
 		free(SA); free(tmp);
+	} else if (algo == 7) { // libsais64 gsa
+		int64_t *SA = Malloc(int64_t, l);
+		libsais64_gsa(s, SA, l, 6, 0);
+		checksum = SA_checksum64(l, SA);
+		free(SA); free(s);
 	} else if (algo == 5) { // gSACA-K
 		uint_t *SA = Malloc(uint_t, l + 1);
 		int64_t i;
