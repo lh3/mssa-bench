@@ -14,7 +14,7 @@ achieve the goal for any libraries that support integer alphabets, such as
 [libsais][libsais], by converting $T$ to an integer array $X$:
 ```math
 X[k]=\left\{\begin{array}{ll}
-i & \mbox{if $T[k]=\$_i$} \\
+i & \mbox{if }T[k]=\$_i \\
 T[k]+n & \mbox{otherwise}
 \end{array}\right.
 ```
