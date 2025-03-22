@@ -169,9 +169,9 @@ int main(int argc, char *argv[])
 		int64_t *SA = Malloc(int64_t, l);
 #ifdef LIBSAIS_OPENMP
 		if (n_threads > 1) {
-			libsais64_gsa_omp(tmp, SA, l, 10000, 0, n_threads);
+			libsais64_gsa_omp(s, SA, l, 10000, 0, n_threads);
 		} else {
-			libsais64_gsa(tmp, SA, l, 10000, 0);
+			libsais64_gsa(s, SA, l, 10000, 0);
 		}
 #else
 		libsais64_gsa(s, SA, l, 10000, 0);
