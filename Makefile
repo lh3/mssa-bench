@@ -11,6 +11,11 @@ ifneq ($(omp),0)
 	CFLAGS+=-fopenmp
 endif
 
+ifneq ($(asan),)
+	CFLAGS+=-fsanitize=address
+	LIBS+=-fsanitize=address -ldl
+endif
+
 .SUFFIXES:.c .o
 
 .c.o:
