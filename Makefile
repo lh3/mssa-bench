@@ -13,7 +13,7 @@ endif
 
 ifneq ($(asan),)
 	CFLAGS+=-fsanitize=address
-	LIBS+=-fsanitize=address -ldl
+	LIBS+=-fsanitize=address -ldl -lm
 endif
 
 .SUFFIXES:.c .o
