@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 		checksum = SA_checksum64(l, SA);
 		free(SA); free(tmp);
 	} else if (algo == 7) { // libsais64 gsa
-		int64_t *SA = Malloc(int64_t, l);
+		int64_t *SA = Malloc(int64_t, l + 10000);
 #ifdef LIBSAIS_OPENMP
 		if (n_threads > 1) {
 			libsais64_gsa_omp(s, SA, l, 10000, 0, n_threads);
